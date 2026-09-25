@@ -1,0 +1,44 @@
+# 04 Native substitution: pcre2_substitute() with PCRE2_SUBSTITUTE_EXTENDED
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP. preg_replace() implements its own replacer and it
+# knows only $n, \n and ${n}. None of the syntax below reaches PHP.
+#
+# What it is: PCRE2 has a native replace function with a much richer
+# template language. In pcre2test, \=replace= supplies the template and
+# the g pattern modifier makes it global. The result line starts with the
+# number of substitutions made.
+#
+# What it enables: replacement that would otherwise need a callback.
+# The template can reference groups by NAME and change case
+# mid-replacement, and an unmatched group can get a fallback value.
+
+# Expect: 2: <09/2026> and <10/2027>
+# Named group references in the template. preg_replace has no named
+# references at all... there ${m} just passes through as literal text.
+/(?<y>\d{4})-(?<m>\d{2})/g,substitute_extended
+    2026-09 and 2027-10\=replace=<${m}/${y}>
+
+# Expect: 1: HELLO and World
+# Case forcing: \U uppercases until \E and \u titlecases the next
+# character.
+/(\w+) (\w+)/substitute_extended
+    hello world\=replace=\U$1\E and \u$2
+
+# Expect: 1: MISSING
+# A default for an unmatched group with ${n:-text}. preg_replace inserts
+# '' for unmatched groups and there is no way to ask for a fallback.
+/(a)(b)?/substitute_extended
+    a\=replace=${2:-MISSING}
+
+# Expect: 1: <>
+# SUBSTITUTE_UNSET_EMPTY: referencing an unset group in the template is
+# treated as empty instead of being an error.
+/(a)(b)?/substitute_unset_empty
+    a\=replace=<$2>
+
+# Expect: 2: 122
+# SUBSTITUTE_REPLACEMENT_ONLY: the result is only the replacements
+# concatenated. Extraction done through the replace API.
+/x(\d+)/g,substitute_replacement_only
+    x1 y x22\=replace=$1

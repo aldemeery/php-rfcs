@@ -1,0 +1,56 @@
+# 14 Extra compile options: PCRE2_EXTRA_MATCH_WORD,
+#    PCRE2_EXTRA_MATCH_LINE, PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL and more
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP. The PCRE2_EXTRA_* option word has no PHP surface at
+# all except for CASELESS_RESTRICT (the 8.4 'r' modifier). Everything else
+# in the family is unreachable.
+#
+# What it is / what it enables:
+#   MATCH_WORD makes the pattern match whole words only, as if wrapped in
+#   \b(?:...)\b. That is grep -w as an engine option with no pattern
+#   rewriting.
+#   MATCH_LINE makes the pattern match complete lines only. That is
+#   grep -x.
+#   BAD_ESCAPE_IS_LITERAL turns an unknown escape like \q into the literal
+#   character instead of a compile error. A lenient mode for patterns that
+#   come from configuration or user input.
+#   ALLOW_LOOKAROUND_BSK re-enables \K inside lookarounds, which PHP 8.5
+#   hard-disabled with no way to opt back in.
+# (Also unexposed and not demoed here: ESCAPED_CR_IS_LF,
+# ALLOW_SURROGATE_ESCAPES, NO_BS0, PYTHON_OCTAL, NEVER_CALLOUT.)
+
+# Expect: 0: cat
+# MATCH_WORD: "cat" as a whole word matches...
+/cat/match_word
+    the cat sat
+
+# Expect: No match
+# ...but the "cat" inside "concatenate" does not.
+/cat/match_word
+    concatenate
+
+# Expect: 0: cat
+# MATCH_LINE: the pattern must span a whole line.
+/cat/match_line
+    cat
+
+# Expect: No match
+# A line with anything else on it fails.
+/cat/match_line
+    a cat
+
+# Expect: 0: q
+# BAD_ESCAPE_IS_LITERAL: \q is a compile error in PHP. Here it just means
+# the literal letter.
+/\q/bad_escape_is_literal
+    q
+
+# Expect: Start of matched string is beyond its end - displaying from end to start.
+#         0: b
+# ALLOW_LOOKAROUND_BSK: \K inside a lookaround works again. PHP 8.5's
+# compile error even names the option that nothing in PHP can set: "\K
+# is not allowed in lookarounds (but see PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK)".
+# (The odd first line is pcre2test noting the \K-shifted match start.)
+/a(?=b\K)/allow_lookaround_bsk
+    ab

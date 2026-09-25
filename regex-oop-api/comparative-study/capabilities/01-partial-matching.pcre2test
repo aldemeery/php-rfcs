@@ -1,0 +1,60 @@
+# 01 Partial matching: PCRE2_PARTIAL_SOFT / PCRE2_PARTIAL_HARD
+# https://www.pcre.org/current/doc/html/pcre2partial.html
+#
+# Not exposed by PHP.
+#
+# What it is: a third match outcome. When the end of the subject arrives
+# mid-attempt and more input could still complete the match, pcre2_match()
+# returns PCRE2_ERROR_PARTIAL instead of "no match".
+# Soft (\=ps) prefers a complete match. Partial is reported only when no
+# complete match exists in the input.
+# Hard (\=ph) reports partial the moment input runs out mid-attempt. The
+# subject is treated as a stream prefix, so even $ refuses to commit.
+#
+# What it enables: type-ahead validation, where a prefix answers "could
+# this still become valid?". Also scanning input that arrives in chunks.
+
+# Soft vs hard on the same subject
+
+# Expect: 0: dog
+# Soft prefers the complete match. "dog" matches and (sbody)? stays
+# unmatched.
+/dog(sbody)?/
+    dogsb\=ps
+
+# Expect: Partial match: dogsb
+# Hard prefers the partial. The attempt at "dogsbody" ran out of input and
+# more input may still arrive.
+/dog(sbody)?/
+    dogsb\=ph
+
+# Type-ahead validation of a date: the use case PHP cannot express
+
+# Expect: Partial match: 2026
+# A valid prefix answers "keep typing".
+/^\d{4}-\d{2}-\d{2}$/
+    2026\=ph
+
+# Expect: Partial match: 2026-
+/^\d{4}-\d{2}-\d{2}$/
+    2026-\=ph
+
+# Expect: Partial match: 2026-09-2
+/^\d{4}-\d{2}-\d{2}$/
+    2026-09-2\=ph
+
+# Expect: Partial match: 2026-09-25
+# Input that LOOKS complete stays partial under hard semantics. $ cannot
+# commit while more input may come.
+/^\d{4}-\d{2}-\d{2}$/
+    2026-09-25\=ph
+
+# Expect: 0: 2026-09-25
+# The closed-stream check: same subject with \=ph dropped, so $ commits.
+/^\d{4}-\d{2}-\d{2}$/
+    2026-09-25
+
+# Expect: No match
+# A wrong character can never be repaired by more input, even under \=ph.
+/^\d{4}-\d{2}-\d{2}$/
+    2026/09\=ph

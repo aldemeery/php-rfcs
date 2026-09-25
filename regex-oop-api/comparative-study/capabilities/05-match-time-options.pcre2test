@@ -1,0 +1,65 @@
+# 05 Match-time options: PCRE2_NOTBOL, NOTEOL, NOTEMPTY,
+#    NOTEMPTY_ATSTART, ANCHORED, ENDANCHORED
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP.
+#
+# What it is: per-call options on pcre2_match() that change how one
+# match runs against one subject without touching the compiled pattern.
+# NOTBOL says the buffer's start is not the real line start. NOTEOL says
+# its end is not the real end. NOTEMPTY and NOTEMPTY_ATSTART refuse empty
+# matches. ANCHORED and ENDANCHORED pin the match to the start or the end.
+# PHP can bake the A modifier into a pattern but has nothing per call.
+#
+# What it enables: matching a window of a larger text without lying to
+# ^ and $. Also scanners that suppress empty matches instead of
+# hand-advancing offsets, and exact-position checks with an unmodified
+# pattern.
+
+# Expect: No match
+# NOTBOL: the buffer starts mid-line, so ^ must not match at offset 0.
+/^a/
+    abc\=notbol
+
+# Expect: No match
+# NOTEOL: the buffer ends mid-line, so $ must not match at the end.
+/c$/
+    abc\=noteol
+
+# Expect: 0:
+# Baseline for the next block: a* returns an EMPTY match at the start of
+# a subject with no 'a' in reach.
+/a*/
+    bcd
+
+# Expect: No match
+# NOTEMPTY: the same call refuses empty matches entirely.
+/a*/
+    bcd\=notempty
+
+# Expect: 0: aa
+# NOTEMPTY_ATSTART refuses only the empty match at the start position.
+# The engine moves on and finds the real "aa" instead of returning "" at 0.
+/a*/
+    xaay\=notempty_atstart
+
+# Expect: No match
+# ANCHORED at match time: the match must start exactly at the start
+# offset.
+/b/
+    ab\=anchored
+
+# Expect: 0: b
+# The same pattern and subject without the option.
+/b/
+    ab
+
+# Expect: No match
+# ENDANCHORED: the match must END at the end of the subject.
+/abc/
+    abcdef\=endanchored
+
+# Expect: 0: abc
+# Without it, the same match succeeds at the front.
+/abc/
+    abcdef

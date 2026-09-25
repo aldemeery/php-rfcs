@@ -1,0 +1,30 @@
+# 07 Pattern introspection: pcre2_pattern_info()
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP.
+#
+# What it is: a compiled pattern can be queried. Capture group count,
+# the name-to-number table, the maximum lookbehind, which code units a
+# match can start with, the minimum subject length and more. PHP calls
+# this API internally on every compile (it needs the capture count and
+# the name table to build $matches) and exposes none of it. Userland
+# cannot even validate a pattern except by matching it against something
+# and checking for false.
+#
+# What it enables: tooling. Validators with real diagnostics, and
+# generic code that discovers group names without ever running a match.
+#
+# The info pattern modifier below prints what pcre2_pattern_info()
+# reports before the subject is matched.
+
+# Expect: Capture group count = 2
+#         Max lookbehind = 1
+#         Named capture groups:
+#           m   2
+#           y   1
+#         Starting code units: 0 1 2 3 4 5 6 7 8 9
+#         Last code unit = '-'
+#         Subject length lower bound = 7
+#         then the match output 0: 2026-09, 1: 2026, 2: 09
+/(?<y>\d{4})-(?<m>\d{2})(?<=\d)/info
+    2026-09

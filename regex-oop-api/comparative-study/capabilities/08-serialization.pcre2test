@@ -1,0 +1,25 @@
+# 08 Compiled-pattern serialization: pcre2_serialize_encode() and _decode()
+# https://www.pcre.org/current/doc/html/pcre2serialize.html
+#
+# Not exposed by PHP.
+#
+# What it is: a compiled pattern can be turned into a byte string and
+# reconstructed later in another process without recompiling. The closest
+# thing PHP has is its internal per-process pattern cache. You cannot
+# see that cache or warm it, and it is gone on restart.
+#
+# What it enables: precompiling a large pattern set at build or deploy
+# time and shipping the bytes to workers. No compile cost at cold start.
+#
+# How the demo works: push compiles the pattern onto pcre2test's stack
+# without matching. #save writes the stacked pattern to disk as bytes
+# (this demo writes /tmp/pcre2-gap-08.bin). #load reads the bytes back
+# onto the stack and #pop makes the DESERIALIZED pattern current. The
+# subject then matches against it. Nothing on that path recompiles.
+
+# Expect: 0: 2026
+/\d{4}/push
+#save /tmp/pcre2-gap-08.bin
+#load /tmp/pcre2-gap-08.bin
+#pop
+    year 2026

@@ -1,0 +1,37 @@
+# 02 DFA matching: pcre2_dfa_match()
+# https://www.pcre.org/current/doc/html/pcre2matching.html
+#
+# Not exposed by PHP.
+#
+# What it is: PCRE2 ships a second matching engine. pcre2_dfa_match()
+# scans the subject once and tracks all alternatives in parallel. There is
+# no backtracking. It reports ALL matches that start at the match point
+# (longest first) and it can suspend at the end of one buffer and resume
+# in the next. Capture groups are not supported. \=dfa selects the engine
+# in pcre2test.
+#
+# What it enables: leftmost-longest ("POSIX") semantics and "every
+# alternative that matches here" queries. It also streams over chunked
+# input. And since nothing backtracks, the patterns it accepts cannot
+# blow up.
+
+# Every alternative that matches at one starting point
+
+# Expect: 0: abc
+#         1: ab
+#         2: a
+# One call reports every alternative matching at the same start position.
+# The regular engine reports only the first alternative that succeeds.
+/a|ab|abc/
+    abc\=dfa
+
+# Streaming: one match across two chunks
+
+# Expect: Partial match: dogsb
+#         0: ody
+# The first chunk ends mid-match (hard partial). The second call picks up
+# where the first stopped, in a completely new buffer. The two subjects
+# below are ONE match split over two chunks.
+/dogsbody/
+    dogsb\=dfa,ps
+    ody\=dfa,dfa_restart

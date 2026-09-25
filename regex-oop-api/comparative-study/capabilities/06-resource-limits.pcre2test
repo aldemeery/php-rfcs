@@ -1,0 +1,50 @@
+# 06 Per-call resource limits: pcre2_set_match_limit(),
+#    pcre2_set_depth_limit(), pcre2_set_heap_limit(), pcre2_set_offset_limit()
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP.
+#
+# What it is: every single match call can carry its own budgets via a
+# match context. Computation steps (match limit), backtracking depth, heap
+# bytes and how far into the subject a match may start (offset limit).
+# PHP has exactly two of these, and only as process-wide INI settings
+# (pcre.backtrack_limit and pcre.recursion_limit). The in-pattern
+# (*LIMIT_MATCH/DEPTH/HEAP) verbs can only LOWER budgets. A heap-limit
+# abort shows up in PHP as the generic "Internal error". The offset limit
+# has no PHP equivalent at all, and neither do other context settings like
+# max_pattern_length.
+# pcre2test can also DISCOVER the minimum budgets a match needs
+# (find_limits). Nothing in PHP can measure that.
+#
+# What it enables: a tight budget around untrusted input at the one call
+# site that needs it, instead of one global knob. It also caps where in a
+# large buffer a match may begin, and find_limits shows what a match
+# actually costs.
+
+# Expect: Minimum heap limit = 6
+#         Minimum match limit = 2621440
+#         Minimum depth limit = 43
+#         No match
+# Limit discovery: pcre2test binary-searches the budgets this exact match
+# needs. 2.6 million steps just to fail on 20 characters... the numbers
+# alone tell you the pattern is dangerous.
+/(a+)+$/
+    aaaaaaaaaaaaaaaaaaaa!\=find_limits
+
+# Expect: Failed: error -47: match limit exceeded
+# The same runaway match under a per-call budget of 10 steps. It is cut
+# off as a hard error, distinct from "No match".
+/(a+)+$/
+    aaaaaaaaaaaaaaaaaaaa!\=match_limit=10
+
+# Expect: No match
+# Offset limit: the match may not START beyond offset 2, so the 'b' at
+# offset 3 is out of reach. (Needs a pattern compiled with
+# use_offset_limit.)
+/b/use_offset_limit
+    aaab\=offset_limit=2
+
+# Expect: 0: b
+# The same call with the limit raised past the match position.
+/b/use_offset_limit
+    aaab\=offset_limit=5

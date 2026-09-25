@@ -1,0 +1,38 @@
+# 11 Scan substring: (*scs:(ref) pattern)
+# https://www.pcre.org/current/doc/html/pcre2pattern.html
+#
+# Needs PCRE2 10.45 or newer.
+#
+# What it is: a zero-width assertion that runs a sub-pattern against the
+# CONTENT of a captured group, as if that capture were its own subject.
+# ^ and $ inside it anchor to the capture's boundaries and not the real
+# subject's. The capture can be referenced by number (*scs:(1)...) or by
+# name (*scs:('name')... or (<name>)...).
+#
+# What it enables: "the captured field must itself satisfy this pattern"
+# checks inside one match. The field gets validated as a whole right after
+# being captured, with no second preg call in code.
+
+# Expect: 0: 123;
+#         1: 123
+# The field before ';' is captured and then asserted to be ALL digits.
+# The ^ and $ inside (*scs:) bind to the capture "123" and not to the
+# subject.
+/(\w+);(*scs:(1)^\d+$)/
+    123;x
+
+# Expect: No match
+# "12a" fails the all-digits assertion, and no way of re-splitting the
+# subject can satisfy it.
+/(\w+);(*scs:(1)^\d+$)/
+    12a;x
+
+# Expect: 0: 1;
+#         1: 1
+# The assertion participates in backtracking. \w+ first grabs "abc1" and
+# the assertion holds (it needs a digit in the capture, referenced by name
+# here). But the engine also needs ';' next, so \w+ shrinks until the rest
+# of the subject fits. The final capture is "1", the smallest \w+ tail
+# that still holds a digit and is followed by ';'.
+/(?<w>\w+);(*scs:(<w>)\d)/
+    abc1;x

@@ -1,0 +1,32 @@
+# 10 Extended character classes: (?[ ... ]) set operations
+# https://www.pcre.org/current/doc/html/pcre2pattern.html
+#
+# Needs PCRE2 10.45 or newer. PHP bundles 10.44, where the pattern below
+# fails to compile ("unrecognized character after (? or (?-").
+#
+# What it is: Perl-style extended classes with real set algebra inside
+# the pattern. & is intersection, | is union, - is subtraction and ^ is
+# symmetric difference. Parentheses and free whitespace are allowed.
+# 10.45 also added PCRE2_ALT_EXTENDED_CLASS, which puts the UTS#18
+# operators (&&, --, ~~) inside ordinary [...] classes. That variant is an
+# API option, so PHP would additionally need a new modifier for it.
+#
+# What it enables: classes computed from properties instead of
+# hand-built ranges. "Letters that are ASCII" or "everything Greek except
+# vowels" without enumerating code points.
+
+# Expect: 0: x
+# Intersection: a letter that is also ASCII.
+/(?[ \p{L} & \p{ASCII} ])/utf
+    x
+
+# Expect: No match
+# é is a letter but not ASCII, so the intersection excludes it.
+/(?[ \p{L} & \p{ASCII} ])/utf
+    é
+
+# Expect: 0: x
+# The same intersection in UTS#18 spelling inside plain brackets. Enabled
+# by the PCRE2_ALT_EXTENDED_CLASS compile option (alt_extended_class here).
+/[\p{L} && \p{ASCII}]/utf,alt_extended_class
+    x

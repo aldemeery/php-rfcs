@@ -1,0 +1,78 @@
+# 13 Compile options with no in-pattern spelling: PCRE2_LITERAL,
+#    PCRE2_MATCH_UNSET_BACKREF, PCRE2_FIRSTLINE and more
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP. Unlike most compile options these have neither a PHP
+# modifier letter nor a (*DIRECTIVE) form, so nothing in a preg pattern
+# string can ever reach them.
+#
+# What it is / what it enables:
+#   LITERAL makes the whole pattern plain text with no metacharacters.
+#   What preg_quote() does, as an engine option (Java ships this as
+#   Pattern.LITERAL).
+#   MATCH_UNSET_BACKREF makes a backreference to an unset group match
+#   empty instead of failing. That is JavaScript's rule, so JS-dialect
+#   patterns behave identically.
+#   FIRSTLINE forces any match to start on the first line of the subject.
+#   No anchor can express that constraint.
+#   MATCH_INVALID_UTF matches UTF patterns over subjects containing
+#   invalid UTF-8 instead of failing the whole call.
+#   ALLOW_EMPTY_CLASS makes [] a valid class that never matches (the
+#   JavaScript rule again) instead of a compile error.
+# (Also API-only and not demoed here: ALT_CIRCUMFLEX, ALT_VERBNAMES,
+# NEVER_UTF, NEVER_UCP, NEVER_BACKSLASH_C, NO_UTF_CHECK.)
+
+# Expect: 0: a.b
+# LITERAL: the dot is just a dot.
+/a.b/literal
+    a.b
+
+# Expect: No match
+# ...so "axb" no longer matches the "any char" reading.
+/a.b/literal
+    axb
+
+# Expect: 0: b
+# MATCH_UNSET_BACKREF: (a)? did not participate and \1 matches empty (the
+# JavaScript rule).
+/(a)?\1b/match_unset_backref
+    b
+
+# Expect: No match
+# Default PCRE2 (and therefore PHP) semantics: an unset backreference
+# fails.
+/(a)?\1b/
+    b
+
+# Expect: No match
+# FIRSTLINE: the only 'b' is on the second line, so it is out of reach.
+/b/firstline
+    a\nxb
+
+# Expect: 0: b
+# On the first line it matches as usual.
+/b/firstline
+    b here
+
+# Expect: Failed: error -23: UTF-8 error: illegal byte (0xfe or 0xff) at offset 3
+# Baseline: in UTF mode an invalid byte in the subject fails the whole
+# call. This is PHP's PREG_BAD_UTF8_ERROR.
+/ok/utf
+    ok \xff broken
+
+# Expect: 0: ok
+# MATCH_INVALID_UTF: the same call matches across the damage.
+/ok/utf,match_invalid_utf
+    ok \xff broken
+
+# Expect: Failed: error 106 at offset 4: missing terminating ] for character class
+#         (followed by pcre2test's caret line)
+# Baseline: [] is a compile error in PCRE2 and PHP ("[" then "]y" begins a
+# class that never terminates).
+/x[]y/
+
+# Expect: No match
+# ALLOW_EMPTY_CLASS: [] compiles as a class matching nothing, which is
+# JavaScript's rule. The pattern is valid but can never match.
+/x[]y/allow_empty_class
+    xy

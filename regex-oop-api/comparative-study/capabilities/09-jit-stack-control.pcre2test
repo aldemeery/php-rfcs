@@ -1,0 +1,24 @@
+# 09 JIT stack control: pcre2_jit_stack_create()
+# https://www.pcre.org/current/doc/html/pcre2jit.html
+#
+# Not exposed by PHP. The JIT stack is hardcoded in PHP. When a match exhausts it PHP reports
+# PREG_JIT_STACKLIMIT_ERROR and userland has nothing to adjust.
+#
+# What it is: JIT-compiled matching runs on its own stack and PCRE2 lets
+# the caller create that stack at any size and share it between patterns.
+# The jitstack subject modifier below sets the stack size in KiB for one
+# match call.
+#
+# What it enables: patterns that really do need deep recursion keep JIT
+# speed instead of hitting an unavoidable stack limit. The other direction
+# works too... a deliberately small stack as a resource cap.
+
+# Expect: Failed: error -46: JIT stack limit reached
+# 500 levels of recursion do not fit a 1 KiB JIT stack.
+/^(a(?1)?a)$/jit
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=jitstack=1
+
+# Expect: 0: (the whole 500-character subject), 1: (the same)
+# The identical call with a 512 KiB stack completes the match.
+/^(a(?1)?a)$/jit
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=jitstack=512

@@ -1,0 +1,33 @@
+# 16 Subroutine calls that return captures: (?&name(<group>,...))
+# https://www.pcre.org/current/doc/html/pcre2pattern.html
+#
+# Needs PCRE2 10.47 or newer. PHP bundles 10.44, where the call-argument
+# syntax is a compile error ("syntax error in subpattern name").
+#
+# What it is: normally a subroutine call like (?1) or (?&name) runs a
+# group's sub-pattern and then discards whatever that run captured. Since
+# 10.47 a call can list capture groups to RETURN to the calling context,
+# written (?1(GROUP,...)) or (?&name(<group>,...)). After the call those
+# groups hold what the subroutine matched, visible to backreferences and
+# $matches.
+#
+# What it enables: (?(DEFINE)...) rule libraries that also export what
+# they captured. A "date rule" defined once can hand its year back to
+# every call site.
+
+# Expect: 0: a=b
+#         1: <unset>
+#         2: a
+# The DEFINEd rule "pair" is invoked by call and the call returns group
+# <x> ("a") to the caller. Group 2 is set AFTER the call. Without the
+# (<x>) argument it would be <unset>.
+/(?(DEFINE)(?<pair>(?<x>\w)=(?<y>\w)))(?&pair(<x>))/
+    a=b
+
+# Expect: 0: Saturday,Sat
+#         1: <unset>
+#         2: Sat
+# A backreference consumes a capture made INSIDE the finished call.
+# \k<short> matches "Sat" because the call exported <short>.
+/(?(DEFINE)(?<wd>(?|(?<short>Sat)urday|(?<short>Sun)day)))(?&wd(<short>)),\k<short>/
+    Saturday,Sat

@@ -1,0 +1,43 @@
+# 03 Callouts: (?Cn) with pcre2_set_callout()
+# https://www.pcre.org/current/doc/html/pcre2callout.html
+#
+# Not exposed by PHP. The (?C) syntax compiles in preg_* patterns but
+# there is no way to register a handler, so callouts do nothing there.
+#
+# What it is: (?Cn) marks points in a pattern. At match time the engine
+# calls user code at every mark it passes and hands over the callout
+# number, the current subject position and the match state so far. The
+# callback then decides. It can let matching continue or fail just this
+# path to force backtracking. It can also abort the whole match.
+#
+# What it enables: tracing a match as the engine walks it, or aborting
+# one that runs too long. Also predicates in the middle of a pattern that
+# regex syntax alone cannot express.
+
+# Expect: --->abc
+#           1 ^^      b
+#           2 ^ ^     c
+#          0: abc
+# pcre2test installs its own handler and prints one trace line per callout
+# hit, showing the callout number, the position markers and the next
+# pattern item. That handler is the part PHP has no way to attach.
+/a(?C1)b(?C2)c/
+    abc
+
+# Expect: Callout 1  b
+#         Callout "tag"  c
+# Callout enumeration: pcre2_callout_enumerate() walks a compiled pattern
+# and lists every callout without running a match. Useful for tooling and
+# also unreachable from PHP.
+/a(?C1)b(?C"tag")c/callout_info
+
+# Expect: --->ab
+#          +0 ^      a
+#          +1 ^^     b
+#          +2 ^ ^    End of pattern
+#          0: ab
+# Auto callouts: PCRE2_AUTO_CALLOUT inserts a callout before every pattern
+# item, so you get a full step-by-step trace without touching the pattern.
+# PHP cannot reach this one either.
+/ab/auto_callout
+    ab

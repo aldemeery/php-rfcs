@@ -1,0 +1,24 @@
+# 12 ECMAScript-style escapes: PCRE2_ALT_BSUX / PCRE2_EXTRA_ALT_BSUX
+# https://www.pcre.org/current/doc/html/pcre2api.html
+#
+# Not exposed by PHP. Native PCRE2 rejects the escape outright and the
+# options that would turn it on have no PHP modifier.
+#
+# What it is: compile options that switch escape handling to the
+# JavaScript convention. \u0041-style four-digit escapes and (with the
+# EXTRA variant) \u{...} code point escapes. The same rules as
+# /u-flagged ECMAScript regexes.
+#
+# What it enables: a JavaScript-dialect pattern copied from frontend
+# code runs unmodified.
+
+# Expect: 0: A\x{1f600}
+# \u0041 is "A" and \u{1F600} is the emoji. ES semantics in one pattern.
+/^\u0041\u{1F600}$/utf,extra_alt_bsux
+    A😀
+
+# Expect: Failed: error 137 at offset 3: PCRE2 does not support \F, \L, \l, \N{name}, \U, or \u
+#         (followed by pcre2test's caret line pointing at the escape)
+# The identical escape without the option. This is what PHP says today
+# and there is no way to say otherwise.
+/^\u0041$/utf

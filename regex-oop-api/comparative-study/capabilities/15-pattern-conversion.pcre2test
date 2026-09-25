@@ -1,0 +1,32 @@
+# 15 Pattern conversion: pcre2_pattern_convert()
+# https://www.pcre.org/current/doc/html/pcre2convert.html
+#
+# Not exposed by PHP.
+#
+# What it is: a converter that turns foreign pattern dialects into
+# equivalent PCRE2 patterns. It understands shell globs and both POSIX
+# regex flavors. The #pattern convert=glob command below makes pcre2test
+# convert every following pattern and print the translation right after
+# compiling it.
+#
+# What it enables: accepting glob or POSIX syntax at an API boundary
+# (file filters, legacy configs) while matching with one engine. The
+# hand-written glob-to-regex translator in userland goes away.
+
+#pattern convert=glob
+
+# Expect: (?s)\Aa(*COMMIT)[^/]*?c\.txt\z
+#         then 0: abc.txt
+# The glob a*c.txt is converted (pcre2test prints the translation) and
+# compiled. * does not cross '/' and the dot is literal and the whole
+# thing is anchored. Glob semantics with no userland translation code.
+/a*c.txt/
+    abc.txt
+
+# Expect: (?s)\Aa(*COMMIT)[^/]*?c\.txt\z
+#         then No match
+# The '/' in "ab/c.txt" is exactly what * must not cross, so the glob
+# does not match. The translation prints again because this block
+# compiles the glob afresh.
+/a*c.txt/
+    ab/c.txt
